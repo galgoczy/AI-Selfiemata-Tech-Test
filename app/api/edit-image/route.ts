@@ -8,6 +8,9 @@ const TARGET_HEIGHT = 1200;
 const MODEL = "gemini-2.5-flash-image-preview";
 
 const MAX_ERROR_BODY_LOG_LENGTH = 1200;
+const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+const MAX_GEMINI_IMAGE_BYTES = 2.5 * 1024 * 1024;
+const JPEG_QUALITIES = [90, 82, 74, 66, 58];
 
 type GeminiPart = {
   text?: string;
@@ -31,6 +34,22 @@ type GeminiResponse = {
 };
 
 const createRequestId = () => `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+async function prepareImageForGemini(originalBuffer: Buffer) {
+  const resized = sharp(originalBuffer).resize(TARGET_WIDTH, TARGET_HEIGHT, {
+    fit: "cover",
+    position: "centre",
+  });
+
+  for (const quality of JPEG_QUALITIES) {
+    const buffer = await resized.clone().jpeg({ quality }).toBuffer();
+    if (buffer.length <= MAX_GEMINI_IMAGE_BYTES || quality === JPEG_QUALITIES[JPEG_QUALITIES.length - 1]) {
+      return { buffer, quality };
+    }
+  }
+
+  return { buffer: await resized.jpeg({ quality: 58 }).toBuffer(), quality: 58 };
+}
 
 export async function POST(request: Request) {
   const requestId = createRequestId();
@@ -56,14 +75,18 @@ export async function POST(request: Request) {
       );
     }
 
+    if (imageFile.size > MAX_UPLOAD_BYTES) {
+      return NextResponse.json(
+        {
+          error: "A feltöltött kép túl nagy. Maximum 15 MB fájl tölthető fel.",
+          requestId,
+        },
+        { status: 413 },
+      );
+    }
+
     const originalBuffer = Buffer.from(await imageFile.arrayBuffer());
-    const croppedBuffer = await sharp(originalBuffer)
-      .resize(TARGET_WIDTH, TARGET_HEIGHT, {
-        fit: "cover",
-        position: "centre",
-      })
-      .jpeg({ quality: 92 })
-      .toBuffer();
+    const { buffer: croppedBuffer, quality } = await prepareImageForGemini(originalBuffer);
 
     const startedAt = performance.now();
     const geminiResponse = await fetch(
@@ -110,10 +133,13 @@ export async function POST(request: Request) {
     }
 
     if (!geminiResponse.ok) {
-      const detail = payload?.error?.message ?? "Gemini API hiba történt a feldolgozás során.";
+      const isPayloadTooLarge = geminiResponse.status === 413;
+      const detail = isPayloadTooLarge
+        ? "A Gemini visszautasította a képet (413 Payload Too Large). Próbálj kisebb felbontású vagy jobban tömörített képet feltölteni."
+        : payload?.error?.message ?? "Gemini API hiba történt a feldolgozás során.";
 
       console.error(
-        `[edit-image][${requestId}] Gemini error. status=${geminiResponse.status}, code=${payload?.error?.code ?? "n/a"}, apiStatus=${payload?.error?.status ?? "n/a"}, detail=${detail}`,
+        `[edit-image][${requestId}] Gemini error. status=${geminiResponse.status}, code=${payload?.error?.code ?? "n/a"}, apiStatus=${payload?.error?.status ?? "n/a"}, detail=${detail}, requestImageBytes=${croppedBuffer.length}, jpegQuality=${quality}`,
       );
 
       if (!payload?.error?.message && rawResponseText) {

@@ -5,6 +5,11 @@ import { useState, useRef, useCallback } from "react";
 const TARGET_WIDTH = 1800;
 const TARGET_HEIGHT = 1200;
 
+const MODELS = [
+  { id: "gemini-2.5-flash-image", label: "Gemini 2.5 Flash Image", short: "2.5 Flash" },
+  { id: "gemini-3-pro-image-preview", label: "Gemini 3 Pro Image (Nano Banana Pro)", short: "3 Pro" },
+] as const;
+
 function cropAndResizeImage(file: File): Promise<{ base64: string; mimeType: string }> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -54,6 +59,8 @@ export default function Home() {
   const [elapsed, setElapsed] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [responseText, setResponseText] = useState<string | null>(null);
+  const [selectedModel, setSelectedModel] = useState(MODELS[0].id);
+  const [usedModel, setUsedModel] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const imageDataRef = useRef<{ base64: string; mimeType: string } | null>(null);
 
@@ -83,6 +90,7 @@ export default function Home() {
     setResultUrl(null);
     setElapsed(null);
     setResponseText(null);
+    setUsedModel(null);
 
     try {
       const res = await fetch("/api/generate", {
@@ -91,6 +99,7 @@ export default function Home() {
         body: JSON.stringify({
           image: imageDataRef.current.base64,
           mimeType: imageDataRef.current.mimeType,
+          model: selectedModel,
         }),
       });
 
@@ -104,6 +113,7 @@ export default function Home() {
 
       setElapsed(data.elapsedMs);
       setResponseText(data.text || null);
+      setUsedModel(data.model || selectedModel);
 
       if (data.image && data.mimeType) {
         setResultUrl(`data:${data.mimeType};base64,${data.image}`);
@@ -113,7 +123,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedModel]);
 
   const handleReset = useCallback(() => {
     setPreviewUrl(null);
@@ -134,7 +144,7 @@ export default function Home() {
             Viking Image Generator
           </h1>
           <p className="mt-2 text-lg text-slate-400">
-            Gemini 2.5 Flash &middot; Image Editing Tech Demo
+            Gemini Image Editing Tech Demo
           </p>
           <p className="mt-1 text-sm text-slate-500">
             Tölts fel egy fotót, és a Gemini viking jelenetre alakítja!
@@ -151,6 +161,26 @@ export default function Home() {
             Viking hajóra. A fotóalanyok kapjanak viking kinézetet (ruházat,
             kiegészítők, stb.)&rdquo;
           </p>
+        </div>
+
+        {/* Model selector */}
+        <div className="mb-8 flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800/50 p-3">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 mr-2">
+            Modell
+          </span>
+          {MODELS.map((m) => (
+            <button
+              key={m.id}
+              onClick={() => setSelectedModel(m.id)}
+              className={`rounded-md px-4 py-2 text-sm font-medium transition ${
+                selectedModel === m.id
+                  ? "bg-amber-600 text-white"
+                  : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+              }`}
+            >
+              {m.label}
+            </button>
+          ))}
         </div>
 
         {/* Upload area */}
@@ -249,7 +279,7 @@ export default function Home() {
                     Modell
                   </span>
                   <p className="text-lg font-medium text-slate-200">
-                    gemini-2.5-flash-image
+                    {usedModel ?? selectedModel}
                   </p>
                 </div>
               </div>

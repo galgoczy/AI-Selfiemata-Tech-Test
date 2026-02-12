@@ -5,13 +5,24 @@ export const maxDuration = 120;
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
 
+const ALLOWED_MODELS = [
+  "gemini-2.5-flash-image",
+  "gemini-3-pro-image-preview",
+] as const;
+
+type AllowedModel = (typeof ALLOWED_MODELS)[number];
+
 export async function POST(req: NextRequest) {
   try {
-    const { image, mimeType } = await req.json();
+    const { image, mimeType, model } = await req.json();
 
     if (!image) {
       return NextResponse.json({ error: "No image provided" }, { status: 400 });
     }
+
+    const selectedModel: AllowedModel = ALLOWED_MODELS.includes(model)
+      ? model
+      : "gemini-2.5-flash-image";
 
     const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
@@ -21,7 +32,7 @@ export async function POST(req: NextRequest) {
     const startTime = Date.now();
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-image",
+      model: selectedModel,
       contents: [
         {
           role: "user",
@@ -75,6 +86,7 @@ export async function POST(req: NextRequest) {
       mimeType: resultMimeType,
       text: resultText,
       elapsedMs,
+      model: selectedModel,
     });
   } catch (error: unknown) {
     console.error("Gemini API error:", error);

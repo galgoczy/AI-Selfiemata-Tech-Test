@@ -12,6 +12,14 @@ type ApiResult = {
   usedPrompt: string;
 };
 
+type ApiError = {
+  error?: string;
+  requestId?: string;
+  upstreamStatus?: number;
+};
+
+const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+
 export default function HomePage() {
   const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -35,6 +43,11 @@ export default function HomePage() {
       return;
     }
 
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setError("A fájl túl nagy. Maximum 15 MB méretű képet tölthetsz fel.");
+      return;
+    }
+
     const formData = new FormData();
     formData.append("image", file);
 
@@ -46,10 +59,17 @@ export default function HomePage() {
       });
 
       if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as
-          | { error?: string }
-          | null;
-        throw new Error(payload?.error ?? "Ismeretlen hiba.");
+        const payload = (await response.json().catch(() => null)) as ApiError | null;
+        const statusLabel = `HTTP ${response.status}`;
+        const upstreamLabel =
+          typeof payload?.upstreamStatus === "number"
+            ? ` | Gemini: ${payload.upstreamStatus}`
+            : "";
+        const requestIdLabel = payload?.requestId ? ` | Azonosító: ${payload.requestId}` : "";
+
+        throw new Error(
+          `${payload?.error ?? "Ismeretlen hiba."} (${statusLabel}${upstreamLabel}${requestIdLabel})`,
+        );
       }
 
       const payload = (await response.json()) as ApiResult;

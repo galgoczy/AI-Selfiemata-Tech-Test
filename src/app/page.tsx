@@ -11,6 +11,7 @@ const DEFAULT_PROMPT =
 const MODELS = [
   { id: "gemini-2.5-flash-image", label: "Gemini 2.5 Flash Image", short: "2.5 Flash" },
   { id: "gemini-3-pro-image-preview", label: "Gemini 3 Pro Image (Nano Banana Pro)", short: "3 Pro" },
+  { id: "gpt-image-1.5", label: "OpenAI GPT Image 1.5", short: "GPT Image" },
 ] as const;
 
 function cropAndResizeImage(file: File): Promise<{ base64: string; mimeType: string }> {
@@ -250,7 +251,7 @@ export default function Home() {
                     <div className="flex flex-col items-center gap-3 py-16">
                       <div className="h-10 w-10 animate-spin rounded-full border-4 border-amber-500 border-t-transparent" />
                       <span className="text-sm text-slate-400">
-                        Gemini dolgozik...
+                        Generálás folyamatban...
                       </span>
                     </div>
                   )}
@@ -296,7 +297,7 @@ export default function Home() {
             {responseText && (
               <div className="rounded-lg border border-slate-700 bg-slate-800/50 px-5 py-3">
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  Gemini szöveges válasz
+                  Szöveges válasz
                 </span>
                 <p className="mt-1 text-sm text-slate-300">{responseText}</p>
               </div>

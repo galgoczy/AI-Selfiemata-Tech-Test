@@ -5,6 +5,9 @@ import { useState, useRef, useCallback } from "react";
 const TARGET_WIDTH = 1800;
 const TARGET_HEIGHT = 1200;
 
+const DEFAULT_PROMPT =
+  "A fényképen szereplők hátterét cseréld egy tengeren hullámzó Viking hajóra. A fotóalanyok kapjanak viking kinézetet (ruházat, kiegészítők, stb.), de legyenek felismerhetőek és az arcuk is maradjon ugyanez";
+
 const MODELS = [
   { id: "gemini-2.5-flash-image", label: "Gemini 2.5 Flash Image", short: "2.5 Flash" },
   { id: "gemini-3-pro-image-preview", label: "Gemini 3 Pro Image (Nano Banana Pro)", short: "3 Pro" },
@@ -61,6 +64,7 @@ export default function Home() {
   const [responseText, setResponseText] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<(typeof MODELS)[number]["id"]>(MODELS[0].id);
   const [usedModel, setUsedModel] = useState<string | null>(null);
+  const [prompt, setPrompt] = useState(DEFAULT_PROMPT);
   const fileRef = useRef<HTMLInputElement>(null);
   const imageDataRef = useRef<{ base64: string; mimeType: string } | null>(null);
 
@@ -100,6 +104,7 @@ export default function Home() {
           image: imageDataRef.current.base64,
           mimeType: imageDataRef.current.mimeType,
           model: selectedModel,
+          prompt,
         }),
       });
 
@@ -123,7 +128,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [selectedModel]);
+  }, [selectedModel, prompt]);
 
   const handleReset = useCallback(() => {
     setPreviewUrl(null);
@@ -151,16 +156,18 @@ export default function Home() {
           </p>
         </header>
 
-        {/* Prompt display */}
+        {/* Prompt editor */}
         <div className="mb-8 rounded-lg border border-slate-700 bg-slate-800/50 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
             Prompt
           </p>
-          <p className="text-sm text-slate-300 leading-relaxed">
-            &ldquo;A fényképen szereplők hátterét cseréld egy tengeren hullámzó
-            Viking hajóra. A fotóalanyok kapjanak viking kinézetet (ruházat,
-            kiegészítők, stb.)&rdquo;
-          </p>
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            rows={3}
+            className="w-full rounded-md border border-slate-600 bg-slate-900/60 px-3 py-2 text-sm text-slate-200 leading-relaxed placeholder-slate-500 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 resize-y"
+            placeholder="Írd ide a promptot..."
+          />
         </div>
 
         {/* Model selector */}

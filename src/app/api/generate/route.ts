@@ -14,10 +14,14 @@ type AllowedModel = (typeof ALLOWED_MODELS)[number];
 
 export async function POST(req: NextRequest) {
   try {
-    const { image, mimeType, model } = await req.json();
+    const { image, mimeType, model, prompt } = await req.json();
 
     if (!image) {
       return NextResponse.json({ error: "No image provided" }, { status: 400 });
+    }
+
+    if (!prompt || typeof prompt !== "string" || prompt.trim().length === 0) {
+      return NextResponse.json({ error: "No prompt provided" }, { status: 400 });
     }
 
     const selectedModel: AllowedModel = ALLOWED_MODELS.includes(model)
@@ -25,9 +29,6 @@ export async function POST(req: NextRequest) {
       : "gemini-2.5-flash-image";
 
     const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-
-    const prompt =
-      "A fényképen szereplők hátterét cseréld egy tengeren hullámzó Viking hajóra. A fotóalanyok kapjanak viking kinézetet (ruházat, kiegészítők, stb.)";
 
     const startTime = Date.now();
 

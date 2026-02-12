@@ -59,7 +59,7 @@ export default function Home() {
   const [elapsed, setElapsed] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [responseText, setResponseText] = useState<string | null>(null);
-  const [selectedModel, setSelectedModel] = useState(MODELS[0].id);
+  const [selectedModel, setSelectedModel] = useState<(typeof MODELS)[number]["id"]>(MODELS[0].id);
   const [usedModel, setUsedModel] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const imageDataRef = useRef<{ base64: string; mimeType: string } | null>(null);

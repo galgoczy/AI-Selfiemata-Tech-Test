@@ -249,7 +249,7 @@ export default function Home() {
                     Modell
                   </span>
                   <p className="text-lg font-medium text-slate-200">
-                    gemini-2.5-flash-preview-05-20
+                    gemini-2.5-flash-image
                   </p>
                 </div>
               </div>
